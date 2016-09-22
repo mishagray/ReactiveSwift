@@ -276,3 +276,62 @@ extension BindingTarget where Value: OptionalProtocol {
 		return target <~ property.producer
 	}
 }
+
+/// A pseudo `BindingTarget`, constructed from a closure and a lifetime.
+public final class AnyBindingTarget<Value>: BindingTarget {
+	public let lifetime: Lifetime
+	private let setter: (Value) -> Void
+
+	/// Wraps a `BindingTarget`.
+	///
+	/// - parameters:
+	///   - target: The binding target to wrap.
+	public init<T: BindingTarget>(_ target: T) where T.Value == Value {
+		lifetime = target.lifetime
+		setter = target.consume
+	}
+
+	/// Creates a pseudo `BindingTarget`.
+	///
+	/// - parameters:
+	///   - setter: The action to receive values.
+	///   - lifetime: The expected lifetime of any bindings against the resulting
+	///               target.
+	public init(setter: @escaping (Value) -> Void, lifetime: Lifetime) {
+		self.setter = setter
+		self.lifetime = lifetime
+	}
+
+	/// Creates a pseudo `BindingTarget` which consumes values synchronously on
+	/// the main queue.
+	///
+	/// - parameters:
+	///   - setter: The action to receive values.
+	///   - lifetime: The expected lifetime of any bindings against the resulting
+	///               target.
+	public convenience init(mainQueueSetter: @escaping (Value) -> Void, lifetime: Lifetime) {
+		/// Ensures the main queue has been setup property.
+		_ = bindingTargetToken
+
+		let setter: (Value) -> Void = { value in
+			if nil != DispatchQueue.getSpecific(key: specificKey) {
+				mainQueueSetter(value)
+			} else {
+				DispatchQueue.main.sync {
+					mainQueueSetter(value)
+				}
+			}
+		}
+		self.init(setter: setter, lifetime: lifetime)
+	}
+
+	public func consume(_ value: Value) {
+		setter(value)
+	}
+}
+
+private let specificKey = DispatchSpecificKey<Void>()
+
+private var bindingTargetToken: Void = {
+	DispatchQueue.main.setSpecific(key: specificKey, value: ())
+}()
