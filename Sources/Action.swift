@@ -109,21 +109,21 @@ public final class Action<Input, Output, Error: Swift.Error> {
 	///            producer.
 	public func apply(_ input: Input) -> SignalProducer<Output, ActionError<Error>> {
 		return SignalProducer { observer, disposable in
-			var startedExecuting = false
+			var executedProducer: SignalProducer<Output, Error>?
 
 			self.executingQueue.sync {
 				if self._isEnabled.value {
 					self._isExecuting.value = true
-					startedExecuting = true
+					executedProducer = self.executeClosure(input)
 				}
 			}
 
-			if !startedExecuting {
+			guard let producer = executedProducer else {
 				observer.send(error: .disabled)
 				return
 			}
 
-			self.executeClosure(input).startWithSignal { signal, signalDisposable in
+			producer.startWithSignal { signal, signalDisposable in
 				disposable += signalDisposable
 
 				signal.observe { event in
