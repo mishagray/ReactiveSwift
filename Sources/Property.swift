@@ -5,6 +5,7 @@ import Glibc
 #endif
 import enum Result.NoError
 
+
 /// Represents a property that allows observation of its changes.
 ///
 /// Only classes can conform to this protocol, because having a signal
