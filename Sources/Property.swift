@@ -572,7 +572,6 @@ public final class Property<Value>: PropertyProtocol {
 			// `interrupted` to `completed` is unnecessary here.
 
 			guard let unwrappedBox = box else {
-				box = nil
 				// Just forward the event, since no one owns the box or IOW no demand
 				// for a cached latest value.
 				return observer.send(event)
@@ -585,6 +584,7 @@ public final class Property<Value>: PropertyProtocol {
 					}
 				}
 				observer.send(event)
+				box = nil
 			}
 		}
 
