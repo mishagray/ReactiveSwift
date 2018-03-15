@@ -566,23 +566,23 @@ public final class Property<Value>: PropertyProtocol {
 		let disposable = SerialDisposable()
 		let (relay, observer) = Signal<Value, NoError>.pipe(disposable: disposable)
 
-		disposable.inner = unsafeProducer.start { [weak box] event in
+		disposable.inner = unsafeProducer.start { /*[weak box]*/ event in
 			// `observer` receives `interrupted` only as a result of the termination of
 			// `signal`, and would not be delivered anyway. So transforming
 			// `interrupted` to `completed` is unnecessary here.
 
-			guard let unwrappedBox = box else {
-				// Instruments will report a leak if you have a weak variable that is
-				// still pointing to freed memory. By freeing box manually it prevents
-				// Instruments from reporting a leak.
-				box = nil
+//            guard let unwrappedBox = box else {
+//                // Instruments will report a leak if you have a weak variable that is
+//                // still pointing to freed memory. By freeing box manually it prevents
+//                // Instruments from reporting a leak.
+//                box = nil
+//
+//                // Just forward the event, since no one owns the box or IOW no demand
+//                // for a cached latest value.
+//                return observer.send(event)
+//            }
 
-				// Just forward the event, since no one owns the box or IOW no demand
-				// for a cached latest value.
-				return observer.send(event)
-			}
-
-			unwrappedBox.begin { storage in
+			box.begin { storage in
 				storage.modify { value in
 					if let newValue = event.value {
 						value = newValue
