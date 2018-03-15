@@ -137,17 +137,10 @@ public final class CompositeDisposable: Disposable {
 	/// - parameters:
 	///   - disposables: A collection of objects conforming to the `Disposable`
 	///                  protocol
-	public init<S: Sequence>(_ disposables: S)
-		where S.Iterator.Element == Disposable
-	{
-		var bag: Bag<Disposable> = Bag()
-
-		for disposable in disposables {
-			bag.insert(disposable)
-		}
-
+	public init<S: Sequence>(_ disposables: S) where S.Iterator.Element == Disposable {
+		let bag = Bag(disposables)
 		self.disposables = Atomic(bag)
-		self.state = UnsafeAtomicState(DisposableState.active)
+		self.state = UnsafeAtomicState(.active)
 	}
 
 	/// Initialize a `CompositeDisposable` containing the given sequence of
@@ -172,11 +165,9 @@ public final class CompositeDisposable: Disposable {
 	}
 
 	public func dispose() {
-		if state.tryDispose() {
-			if let ds = disposables.swap(nil) {
-				for d in ds {
-					d.dispose()
-				}
+		if state.tryDispose(), let disposables = disposables.swap(nil) {
+			for disposable in disposables {
+				disposable.dispose()
 			}
 		}
 	}
@@ -197,9 +188,8 @@ public final class CompositeDisposable: Disposable {
 		}
 
 		return disposables.modify { disposables in
-			guard disposables != nil else { return nil }
+			guard let token = disposables?.insert(d) else { return nil }
 
-			let token = disposables!.insert(d)
 			return AnyDisposable { [weak self] in
 				self?.disposables.modify {
 					$0?.remove(using: token)
@@ -242,7 +232,7 @@ public final class CompositeDisposable: Disposable {
 	/// - returns: An instance of `DisposableHandle` that can be used to opaquely
 	///            remove the disposable later (if desired).
 	@discardableResult
-	public static func +=(lhs: CompositeDisposable, rhs: Disposable?) -> Disposable? {
+	public static func += (lhs: CompositeDisposable, rhs: Disposable?) -> Disposable? {
 		return lhs.add(rhs)
 	}
 
@@ -260,7 +250,7 @@ public final class CompositeDisposable: Disposable {
 	/// - returns: An instance of `DisposableHandle` that can be used to opaquely
 	///            remove the disposable later (if desired).
 	@discardableResult
-	public static func +=(lhs: CompositeDisposable, rhs: @escaping () -> Void) -> Disposable? {
+	public static func += (lhs: CompositeDisposable, rhs: @escaping () -> Void) -> Disposable? {
 		return lhs.add(rhs)
 	}
 }
@@ -321,7 +311,7 @@ extension ScopedDisposable where Inner == CompositeDisposable {
 	/// - returns: An instance of `DisposableHandle` that can be used to opaquely
 	///            remove the disposable later (if desired).
 	@discardableResult
-	public static func +=(lhs: ScopedDisposable<CompositeDisposable>, rhs: Disposable?) -> Disposable? {
+	public static func += (lhs: ScopedDisposable<CompositeDisposable>, rhs: Disposable?) -> Disposable? {
 		return lhs.inner.add(rhs)
 	}
 
@@ -339,7 +329,7 @@ extension ScopedDisposable where Inner == CompositeDisposable {
 	/// - returns: An instance of `DisposableHandle` that can be used to opaquely
 	///            remove the disposable later (if desired).
 	@discardableResult
-	public static func +=(lhs: ScopedDisposable<CompositeDisposable>, rhs: @escaping () -> Void) -> Disposable? {
+	public static func += (lhs: ScopedDisposable<CompositeDisposable>, rhs: @escaping () -> Void) -> Disposable? {
 		return lhs.inner.add(rhs)
 	}
 }
@@ -363,10 +353,11 @@ public final class SerialDisposable: Disposable {
 			return _inner.value
 		}
 
-		set(d) {
-			_inner.swap(d)?.dispose()
-			if let d = d, isDisposed {
-				d.dispose()
+		set(disposable) {
+			_inner.swap(disposable)?.dispose()
+
+			if let disposable = disposable, isDisposed {
+				disposable.dispose()
 			}
 		}
 	}
