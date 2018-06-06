@@ -1511,9 +1511,9 @@ extension SignalProducer {
 	///            event and switch to passing through events from `replacement`
 	///            instead, regardless of whether `self` has sent events
 	///            already.
-	public func take(untilReplacement replacement: SignalProducer<Value, Error>) -> SignalProducer<Value, Error> {
-		return takeUntilReplacement(replacement: replacement)
-	}
+//	public func take(untilReplacement replacement: SignalProducer<Value, Error>) -> SignalProducer<Value, Error> {
+//		return takeUntilReplacement(replacement: replacement)
+//	}
 
 	/// Forwards events from `self` until `replacement` begins sending events.
 	///
