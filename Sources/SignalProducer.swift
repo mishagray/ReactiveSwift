@@ -1495,19 +1495,7 @@ extension SignalProducer {
 		return core.flatMapEvent(Signal.Event.skip(while: shouldContinue))
 	}
 
-	/// Forwards events from `self` until `replacement` begins sending events.
-	///
-	/// - parameters:
-	///   - replacement: A producer to wait to wait for values from and start
-	///                  sending them as a replacement to `self`'s values.
-	///
-	/// - returns: A producer which passes through `value`, `failed`, and
-	///            `interrupted` events from `self` until `replacement` sends an
-	///            event, at which point the returned producer will send that
-	///            event and switch to passing through events from `replacement`
-	///            instead, regardless of whether `self` has sent events
-	///            already.
-	public func take(untilReplacement replacement: SignalProducer<Value, Error>) -> SignalProducer<Value, Error> {
+	private func takeUntilReplacement(replacement: SignalProducer<Value, Error>) -> SignalProducer<Value, Error> {
 		return liftRight(Signal.take(untilReplacement:))(replacement)
 	}
 
@@ -1523,8 +1511,24 @@ extension SignalProducer {
 	///            event and switch to passing through events from `replacement`
 	///            instead, regardless of whether `self` has sent events
 	///            already.
+	public func take(untilReplacement replacement: SignalProducer<Value, Error>) -> SignalProducer<Value, Error> {
+		return takeUntilReplacement(replacement: replacement)
+	}
+
+	/// Forwards events from `self` until `replacement` begins sending events.
+	///
+	/// - parameters:
+	///   - replacement: A producer to wait to wait for values from and start
+	///                  sending them as a replacement to `self`'s values.
+	///
+	/// - returns: A producer which passes through `value`, `failed`, and
+	///            `interrupted` events from `self` until `replacement` sends an
+	///            event, at which point the returned producer will send that
+	///            event and switch to passing through events from `replacement`
+	///            instead, regardless of whether `self` has sent events
+	///            already.
 	public func take<Replacement: SignalProducerConvertible>(untilReplacement replacement: Replacement) -> SignalProducer<Value, Error> where Replacement.Value == Value, Replacement.Error == Error {
-		return take(untilReplacement: replacement.producer)
+		return takeUntilReplacement(replacement: replacement.producer)
 	}
 
 	/// Wait until `self` completes and then forward the final `count` values

@@ -113,23 +113,11 @@ public final class ValidatingProperty<Value, ValidationError: Swift.Error>: Muta
 		self.init(MutableProperty(initial), validator)
 	}
 
-	/// Create a `ValidatingProperty` that presents a mutable validating
-	/// view for an inner mutable property.
-	///
-	/// The proposed value is only committed when `valid` is returned by the
-	/// `validator` closure.
-	///
-	/// - note: `inner` is retained by the created property.
-	///
-	/// - parameters:
-	///   - inner: The inner property which validated values are committed to.
-	///   - other: The property that `validator` depends on.
-	///   - validator: The closure to invoke for any proposed value to `self`.
-	public convenience init<Other: PropertyProtocol>(
-		_ inner: MutableProperty<Value>,
+	private convenience init<Other: PropertyProtocol>(
+		inner: MutableProperty<Value>,
 		with other: Other,
-		_ validator: @escaping (Value, Other.Value) -> Decision
-	) {
+		validator: @escaping (Value, Other.Value) -> Decision
+		) {
 		// Capture a copy that reflects `other` without influencing the lifetime of
 		// `other`.
 		let other = Property(other)
@@ -138,7 +126,7 @@ public final class ValidatingProperty<Value, ValidationError: Swift.Error>: Muta
 			return validator(input, other.value)
 		}
 
-		// When `other` pushes out a new value, the resulting property would react 
+		// When `other` pushes out a new value, the resulting property would react
 		// by revalidating itself with its last attempted value, regardless of
 		// success or failure.
 		other.signal
@@ -159,6 +147,27 @@ public final class ValidatingProperty<Value, ValidationError: Swift.Error>: Muta
 		}
 	}
 
+
+	/// Create a `ValidatingProperty` that presents a mutable validating
+	/// view for an inner mutable property.
+	///
+	/// The proposed value is only committed when `valid` is returned by the
+	/// `validator` closure.
+	///
+	/// - note: `inner` is retained by the created property.
+	///
+	/// - parameters:
+	///   - inner: The inner property which validated values are committed to.
+	///   - other: The property that `validator` depends on.
+	///   - validator: The closure to invoke for any proposed value to `self`.
+	public convenience init<Other: PropertyProtocol>(
+		_ inner: MutableProperty<Value>,
+		with other: Other,
+		_ validator: @escaping (Value, Other.Value) -> Decision
+	) {
+		self.init(inner: inner, with: other, validator: validator)
+	}
+
 	/// Create a `ValidatingProperty` that validates mutations before
 	/// committing them.
 	///
@@ -175,7 +184,7 @@ public final class ValidatingProperty<Value, ValidationError: Swift.Error>: Muta
 		with other: Other,
 		_ validator: @escaping (Value, Other.Value) -> Decision
 	) {
-		self.init(MutableProperty(initial), with: other, validator)
+		self.init(inner: MutableProperty(initial), with: other, validator: validator)
 	}
 
 	/// Create a `ValidatingProperty` that presents a mutable validating
@@ -195,7 +204,7 @@ public final class ValidatingProperty<Value, ValidationError: Swift.Error>: Muta
 		with other: ValidatingProperty<U, E>,
 		_ validator: @escaping (Value, U) -> Decision
 	) {
-		self.init(inner, with: other, validator)
+		self.init(inner: inner, with: other, validator: validator)
 	}
 
 	/// Create a `ValidatingProperty` that validates mutations before
